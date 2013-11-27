@@ -3,10 +3,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import cv2, math
+#import cv2, math
+import cv2
 import numpy as np
 
-cv2.namedWindow("preview")
+#cv2.namedWindow("preview")
 vc = cv2.VideoCapture(0)
 
 if vc.isOpened(): # try to get the first frame
@@ -14,15 +15,34 @@ if vc.isOpened(): # try to get the first frame
 else:
 	rval = False
 
+COLOR_MIN = np.array([20, 80, 80],np.uint8)
+COLOR_MAX = np.array([40, 255, 255],np.uint8)
+
 while rval:
-	cv2.imshow("preview", frame)
+	#cv2.imshow("preview", frame)
 	rval, frame = vc.read()
+	
+	# invert color
+	hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-	#hc = cv2.CascadeClassifier("/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml")
-	#faces = hc.detectMultiScale(frame)
-	#for face in faces:
-	#	cv2.rectangle(frame, (face[0], face[1]), (face[0] + face[2], face[0] + face[3]), (255, 0, 0), 3)
+	# flaten
+	frame_threshed = cv2.inRange(hsv_img, COLOR_MIN, COLOR_MAX)
 
-	key = cv2.waitKey(20)
+	# get contours
+	ret,thresh = cv2.threshold(frame_threshed,127,255,0)
+	contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+
+	areas = [cv2.contourArea(c) for c in contours]
+	max_index = np.argmax(areas)
+	cnt=contours[max_index]
+	x,y,w,h = cv2.boundingRect(cnt)
+	cv2.rectangle(hsv_img,(x,y),(x+w,y+h),(0,255,0),2)
+
+	cv2.imshow("Show",hsv_img)
+
+	key=cv2.waitKey(20)
 	if key == 27: # exit on ESC
 		break
+
+cv2.destroyAllWindows() 
+cv2.VideoCapture(0).release()
